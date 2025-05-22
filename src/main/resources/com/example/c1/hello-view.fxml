@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.collections.FXCollections?>
+
+<?import java.lang.String?>
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.c1.HelloController" spacing="10">
+
+    <ToolBar>
+        <Label text="Источник данных:" />
+        <ComboBox fx:id="dataSourceComboBox" prefWidth="150">
+            <items>
+                <FXCollections fx:factory="observableArrayList">
+                    <String fx:value="H2 База данных" />
+                    <String fx:value="SQLite База данных" />
+                </FXCollections>
+            </items>
+        </ComboBox>
+    </ToolBar>
+
+    <TableView fx:id="movieTable" prefHeight="300">
+        <columns>
+            <TableColumn fx:id="idColumn" prefWidth="50" text="ID" />
+            <TableColumn fx:id="titleColumn" prefWidth="200" text="Название" />
+            <TableColumn fx:id="yearColumn" prefWidth="80" text="Год" />
+            <TableColumn fx:id="ratingColumn" prefWidth="80" text="Рейтинг" />
+            <TableColumn fx:id="directorColumn" prefWidth="150" text="Режиссер" />
+            <TableColumn fx:id="genreColumn" prefWidth="100" text="Жанр" />
+        </columns>
+    </TableView>
+
+    <HBox spacing="10">
+        <VBox spacing="5">
+            <Label text="Умный поиск" style="-fx-font-weight: bold;" />
+            <HBox spacing="5">
+                <Label text="Жанр:" />
+                <ComboBox fx:id="genreComboBox" prefWidth="120" />
+            </HBox>
+            <HBox spacing="5">
+                <Label text="Мин. рейтинг:" />
+                <TextField fx:id="minRatingField" prefWidth="50" text="7.0" />
+            </HBox>
+            <HBox spacing="5">
+                <Label text="Мин. год:" />
+                <TextField fx:id="minYearField" prefWidth="50" text="2010" />
+            </HBox>
+            <Button fx:id="searchButton" text="Поиск" />
+        </VBox>
+
+        <VBox spacing="5">
+            <Label text="Статистика" style="-fx-font-weight: bold;" />
+            <HBox spacing="5">
+                <Label text="Режиссер:" />
+                <ComboBox fx:id="directorComboBox" prefWidth="200" />
+            </HBox>
+            <Button fx:id="statsButton" text="Показать статистику" />
+        </VBox>
+
+        <VBox spacing="5">
+            <Label text="Поиск дубликатов" style="-fx-font-weight: bold;" />
+            <Label text="По оригинальному названию и году" />
+            <Button fx:id="duplicatesButton" text="Найти дубликаты" />
+        </VBox>
+    </HBox>
+</VBox>
