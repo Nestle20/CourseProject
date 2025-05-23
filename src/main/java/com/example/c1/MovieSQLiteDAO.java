@@ -25,7 +25,7 @@ public class MovieSQLiteDAO implements MovieDAO {
 
     @Override
     public void addMovie(Movie movie) {
-        String sql = "INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO movies (title, original_title, year, imdb_rating, views, director_id, genre_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = dbConnect.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setString(1, movie.getTitle());
             pstmt.setString(2, movie.getOriginalTitle());
@@ -48,7 +48,7 @@ public class MovieSQLiteDAO implements MovieDAO {
 
     @Override
     public void updateMovie(Movie movie) {
-        String sql = "UPDATE movies SET title = ?, original_title = ?, release_year = ?, imdb_rating = ?, views = ?, director_id = ?, genre_id = ? WHERE id = ?";
+        String sql = "UPDATE movies SET title = ?, original_title = ?, year = ?, imdb_rating = ?, views = ?, director_id = ?, genre_id = ? WHERE id = ?";
         try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
             pstmt.setString(1, movie.getTitle());
             pstmt.setString(2, movie.getOriginalTitle());
@@ -78,7 +78,7 @@ public class MovieSQLiteDAO implements MovieDAO {
     @Override
     public List<Movie> getAllMovies() {
         List<Movie> movies = new ArrayList<>();
-        String sql = "SELECT m.id, m.title, m.original_title, m.release_year, m.imdb_rating, m.views, m.director_id, m.genre_id, " +
+        String sql = "SELECT m.id, m.title, m.original_title, m.year, m.imdb_rating, m.views, m.director_id, m.genre_id, " +
                 "d.name AS director_name, g.name AS genre_name " +
                 "FROM movies m " +
                 "LEFT JOIN directors d ON m.director_id = d.id " +
@@ -92,7 +92,7 @@ public class MovieSQLiteDAO implements MovieDAO {
                         crs.getInt("id"),
                         crs.getString("title"),
                         crs.getString("original_title"),
-                        crs.getInt("release_year"),
+                        crs.getInt("year"),
                         crs.getDouble("imdb_rating"),
                         crs.getInt("views"),
                         director,
@@ -108,11 +108,11 @@ public class MovieSQLiteDAO implements MovieDAO {
     @Override
     public List<Movie> smartSearch(Genre genre, double minRating, int minYear) {
         List<Movie> result = new ArrayList<>();
-        String sql = "SELECT m.id, m.title, m.original_title, m.release_year, m.imdb_rating, m.views, m.director_id, " +
+        String sql = "SELECT m.id, m.title, m.original_title, m.year, m.imdb_rating, m.views, m.director_id, " +
                 "d.name AS director_name " +
                 "FROM movies m " +
                 "JOIN directors d ON m.director_id = d.id " +
-                "WHERE m.genre_id = ? AND m.imdb_rating >= ? AND m.release_year >= ?";
+                "WHERE m.genre_id = ? AND m.imdb_rating >= ? AND m.year >= ?";
 
         try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
             pstmt.setInt(1, genre.getId());
@@ -126,7 +126,7 @@ public class MovieSQLiteDAO implements MovieDAO {
                             rs.getInt("id"),
                             rs.getString("title"),
                             rs.getString("original_title"),
-                            rs.getInt("release_year"),
+                            rs.getInt("year"),
                             rs.getDouble("imdb_rating"),
                             rs.getInt("views"),
                             director,
@@ -174,10 +174,10 @@ public class MovieSQLiteDAO implements MovieDAO {
     @Override
     public List<Movie> findDuplicatesByTmdb() {
         List<Movie> duplicates = new ArrayList<>();
-        String sql = "SELECT m1.id, m1.title, m1.original_title, m1.release_year, m1.imdb_rating, " +
+        String sql = "SELECT m1.id, m1.title, m1.original_title, m1.year, m1.imdb_rating, " +
                 "m1.views, m1.director_id, m1.genre_id, d.name AS director_name, g.name AS genre_name " +
                 "FROM movies m1 " +
-                "JOIN movies m2 ON m1.original_title = m2.original_title AND m1.release_year = m2.release_year AND m1.id != m2.id " +
+                "JOIN movies m2 ON m1.original_title = m2.original_title AND m1.year = m2.year AND m1.id != m2.id " +
                 "JOIN directors d ON m1.director_id = d.id " +
                 "JOIN genres g ON m1.genre_id = g.id";
 
@@ -189,7 +189,7 @@ public class MovieSQLiteDAO implements MovieDAO {
                         crs.getInt("id"),
                         crs.getString("title"),
                         crs.getString("original_title"),
-                        crs.getInt("release_year"),
+                        crs.getInt("year"),
                         crs.getDouble("imdb_rating"),
                         crs.getInt("views"),
                         director,

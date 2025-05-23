@@ -36,7 +36,7 @@ public class SQLiteDBConnect {
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "title TEXT NOT NULL, " +
                 "original_title TEXT NOT NULL, " +
-                "release_year INTEGER NOT NULL, " +
+                "year INTEGER NOT NULL, " +
                 "imdb_rating REAL, " +
                 "views INTEGER DEFAULT 0, " +
                 "director_id INTEGER, " +
@@ -67,11 +67,15 @@ public class SQLiteDBConnect {
                 executeUpdate("INSERT INTO directors (name) VALUES ('Martin Scorsese')");
 
                 // Добавляем несколько фильмов
-                executeUpdate("INSERT INTO movies (title, original_title, release_year, " +
+                executeUpdate("INSERT INTO movies (title, original_title, year, " +
                         "imdb_rating, views, director_id, genre_id) VALUES " +
                         "('Inception', 'Inception', 2010, 8.8, 100, 1, 4)");
 
-                executeUpdate("INSERT INTO movies (title, original_title, release_year, " +
+                executeUpdate("INSERT INTO movies (title, original_title, year, " +
+                        "imdb_rating, views, director_id, genre_id) VALUES " +
+                        "('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)");
+
+                executeUpdate("INSERT INTO movies (title, original_title, year, " +
                         "imdb_rating, views, director_id, genre_id) VALUES " +
                         "('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)");
             }
