@@ -16,12 +16,27 @@ public class MovieCSVDAO implements MovieDAO {
     public MovieCSVDAO(GenreDAO genreDAO, DirectorDAO directorDAO) {
         this.genreDAO = genreDAO;
         this.directorDAO = directorDAO;
+        ensureFileExists();
         loadFromCSV();
+    }
+
+    private void ensureFileExists() {
+        File file = new File(currentFilePath);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+                try (PrintWriter pw = new PrintWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
+                    pw.println(CSV_HEADER);
+                }
+            } catch (IOException e) {
+                System.err.println("Error creating CSV file: " + e.getMessage());
+            }
+        }
     }
 
     private void loadFromCSV() {
         File file = new File(currentFilePath);
-        if (file.exists()) {
+        if (file.exists() && file.length() > 0) {
             try (BufferedReader br = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
                 String line;
                 boolean firstLine = true;
@@ -32,35 +47,32 @@ public class MovieCSVDAO implements MovieDAO {
                     }
                     String[] values = line.split(";");
                     if (values.length >= 8) {
-                        int id = Integer.parseInt(values[0].trim());
-                        String title = values[1].trim();
-                        String originalTitle = values[2].trim();
-                        int year = Integer.parseInt(values[3].trim());
-                        double rating = Double.parseDouble(values[4].trim());
-                        int views = Integer.parseInt(values[5].trim());
-                        int directorId = Integer.parseInt(values[6].trim());
-                        int genreId = Integer.parseInt(values[7].trim());
+                        try {
+                            int id = Integer.parseInt(values[0].trim());
+                            String title = values[1].trim();
+                            String originalTitle = values[2].trim();
+                            int year = Integer.parseInt(values[3].trim());
+                            double rating = Double.parseDouble(values[4].trim());
+                            int views = Integer.parseInt(values[5].trim());
+                            int directorId = Integer.parseInt(values[6].trim());
+                            int genreId = Integer.parseInt(values[7].trim());
 
-                        Director director = directorDAO.getDirectorById(directorId);
-                        Genre genre = genreDAO.getGenreById(genreId);
+                            Director director = directorDAO.getDirectorById(directorId);
+                            Genre genre = genreDAO.getGenreById(genreId);
 
-                        if (director != null && genre != null) {
-                            movies.add(new Movie(id, title, originalTitle, year, rating, views, director, genre));
-                            if (id >= idGenerator.get()) {
-                                idGenerator.set(id + 1);
+                            if (director != null && genre != null) {
+                                movies.add(new Movie(id, title, originalTitle, year, rating, views, director, genre));
+                                if (id >= idGenerator.get()) {
+                                    idGenerator.set(id + 1);
+                                }
                             }
+                        } catch (NumberFormatException e) {
+                            System.err.println("Invalid data format in CSV line: " + line);
                         }
                     }
                 }
             } catch (IOException e) {
                 System.err.println("Error reading CSV file: " + e.getMessage());
-            }
-        } else {
-            // Если файл не существует, создаем его с заголовком
-            try (PrintWriter pw = new PrintWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
-                pw.println(CSV_HEADER);
-            } catch (IOException e) {
-                System.err.println("Error creating CSV file: " + e.getMessage());
             }
         }
     }

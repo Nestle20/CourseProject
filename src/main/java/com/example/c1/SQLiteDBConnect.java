@@ -23,7 +23,7 @@ public class SQLiteDBConnect {
     }
 
     private void initializeDatabase() throws SQLException {
-        // Создаем таблицы, если они не существуют
+        // Create tables if they don't exist
         executeUpdate("CREATE TABLE IF NOT EXISTS genres (" +
                 "id INTEGER PRIMARY KEY, " +
                 "name TEXT NOT NULL)");
@@ -44,40 +44,35 @@ public class SQLiteDBConnect {
                 "FOREIGN KEY (director_id) REFERENCES directors(id), " +
                 "FOREIGN KEY (genre_id) REFERENCES genres(id))");
 
-        // Заполняем начальными данными
+        // Fill with initial data if empty
         fillInitialData();
     }
 
     private void fillInitialData() throws SQLException {
-        // Проверяем, есть ли уже данные
+        // Check if genres table is empty
         try (ResultSet rs = executeQuery("SELECT COUNT(*) FROM genres")) {
             if (rs.next() && rs.getInt(1) == 0) {
-                // Заполняем жанры
+                // Insert default genres
                 executeUpdate("INSERT INTO genres VALUES (1, 'Action')");
                 executeUpdate("INSERT INTO genres VALUES (2, 'Comedy')");
                 executeUpdate("INSERT INTO genres VALUES (3, 'Drama')");
                 executeUpdate("INSERT INTO genres VALUES (4, 'Sci-Fi')");
                 executeUpdate("INSERT INTO genres VALUES (5, 'Thriller')");
 
-                // Заполняем режиссеров
+                // Insert default directors
                 executeUpdate("INSERT INTO directors (name) VALUES ('Christopher Nolan')");
                 executeUpdate("INSERT INTO directors (name) VALUES ('Quentin Tarantino')");
                 executeUpdate("INSERT INTO directors (name) VALUES ('Steven Spielberg')");
                 executeUpdate("INSERT INTO directors (name) VALUES ('James Cameron')");
                 executeUpdate("INSERT INTO directors (name) VALUES ('Martin Scorsese')");
 
-                // Добавляем несколько фильмов
-                executeUpdate("INSERT INTO movies (title, original_title, year, " +
-                        "imdb_rating, views, director_id, genre_id) VALUES " +
-                        "('Inception', 'Inception', 2010, 8.8, 100, 1, 4)");
-
-                executeUpdate("INSERT INTO movies (title, original_title, year, " +
-                        "imdb_rating, views, director_id, genre_id) VALUES " +
-                        "('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)");
-
-                executeUpdate("INSERT INTO movies (title, original_title, year, " +
-                        "imdb_rating, views, director_id, genre_id) VALUES " +
-                        "('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)");
+                // Insert sample movies
+                executeUpdate("INSERT INTO movies (title, original_title, year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('Inception', 'Inception', 2010, 8.8, 100, 1, 4)");
+                executeUpdate("INSERT INTO movies (title, original_title, year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)");
+                executeUpdate("INSERT INTO movies (title, original_title, year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('Pulp Fiction', 'Pulp Fiction', 1994, 8.9, 120, 2, 3)");
             }
         }
     }

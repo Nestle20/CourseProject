@@ -23,70 +23,66 @@ public class H2DBConnect {
     }
 
     private void initializeDatabase() throws SQLException {
-        // Создание таблицы жанров и заполнение данными
-        if (!tableExists("genres")) {
-            executeUpdate("CREATE TABLE genres (id INT PRIMARY KEY, name VARCHAR(255) NOT NULL)");
-            // Заполняем стандартными жанрами
-            executeUpdate("INSERT INTO genres VALUES (1, 'Action')");
-            executeUpdate("INSERT INTO genres VALUES (2, 'Comedy')");
-            executeUpdate("INSERT INTO genres VALUES (3, 'Drama')");
-            executeUpdate("INSERT INTO genres VALUES (4, 'Sci-Fi')");
-            executeUpdate("INSERT INTO genres VALUES (5, 'Thriller')");
+        // Create genres table if not exists
+        executeUpdate("CREATE TABLE IF NOT EXISTS genres (" +
+                "id INT PRIMARY KEY, " +
+                "name VARCHAR(255) NOT NULL)");
+
+        // Check if genres table is empty
+        try (ResultSet rs = executeQuery("SELECT COUNT(*) FROM genres")) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Insert default genres
+                executeUpdate("INSERT INTO genres VALUES (1, 'Action')");
+                executeUpdate("INSERT INTO genres VALUES (2, 'Comedy')");
+                executeUpdate("INSERT INTO genres VALUES (3, 'Drama')");
+                executeUpdate("INSERT INTO genres VALUES (4, 'Sci-Fi')");
+                executeUpdate("INSERT INTO genres VALUES (5, 'Thriller')");
+            }
         }
 
-        // Создание таблицы режиссеров и заполнение данными
-        if (!tableExists("directors")) {
-            executeUpdate("""
-                CREATE TABLE directors (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL
-                )""");
-            // Заполняем стандартными режиссерами
-            executeUpdate("INSERT INTO directors (name) VALUES ('Christopher Nolan')");
-            executeUpdate("INSERT INTO directors (name) VALUES ('Quentin Tarantino')");
-            executeUpdate("INSERT INTO directors (name) VALUES ('Steven Spielberg')");
-            executeUpdate("INSERT INTO directors (name) VALUES ('James Cameron')");
-            executeUpdate("INSERT INTO directors (name) VALUES ('Martin Scorsese')");
+        // Create directors table if not exists
+        executeUpdate("CREATE TABLE IF NOT EXISTS directors (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "name VARCHAR(255) NOT NULL)");
+
+        // Check if directors table is empty
+        try (ResultSet rs = executeQuery("SELECT COUNT(*) FROM directors")) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Insert default directors
+                executeUpdate("INSERT INTO directors (name) VALUES ('Christopher Nolan')");
+                executeUpdate("INSERT INTO directors (name) VALUES ('Quentin Tarantino')");
+                executeUpdate("INSERT INTO directors (name) VALUES ('Steven Spielberg')");
+                executeUpdate("INSERT INTO directors (name) VALUES ('James Cameron')");
+                executeUpdate("INSERT INTO directors (name) VALUES ('Martin Scorsese')");
+            }
         }
 
-        // Создание таблицы фильмов и заполнение тестовыми данными
-        if (!tableExists("movies")) {
-            executeUpdate("""
-                CREATE TABLE movies (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    title VARCHAR(255) NOT NULL,
-                    original_title VARCHAR(255) NOT NULL,
-                    release_year INT NOT NULL,
-                    imdb_rating DECIMAL(3,1),
-                    views INT DEFAULT 0,
-                    director_id INT,
-                    genre_id INT,
-                    FOREIGN KEY (director_id) REFERENCES directors(id),
-                    FOREIGN KEY (genre_id) REFERENCES genres(id)
-                )""");
+        // Create movies table if not exists
+        executeUpdate("CREATE TABLE IF NOT EXISTS movies (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "title VARCHAR(255) NOT NULL, " +
+                "original_title VARCHAR(255) NOT NULL, " +
+                "release_year INT NOT NULL, " +
+                "imdb_rating DECIMAL(3,1), " +
+                "views INT DEFAULT 0, " +
+                "director_id INT, " +
+                "genre_id INT, " +
+                "FOREIGN KEY (director_id) REFERENCES directors(id), " +
+                "FOREIGN KEY (genre_id) REFERENCES genres(id))");
 
-            // Добавляем тестовые фильмы
-            executeUpdate("""
-                INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) 
-                VALUES ('Inception', 'Inception', 2010, 8.8, 100, 1, 4)""");
-
-            executeUpdate("""
-                INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) 
-                VALUES ('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)""");
-
-            executeUpdate("""
-                INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) 
-                VALUES ('Pulp Fiction', 'Pulp Fiction', 1994, 8.9, 120, 2, 3)""");
-
-            executeUpdate("""
-                INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) 
-                VALUES ('Interstellar', 'Interstellar', 2014, 8.6, 90, 1, 4)""");
-        }
-    }
-
-    private boolean tableExists(String tableName) throws SQLException {
-        try (ResultSet rs = connection.getMetaData().getTables(null, null, tableName.toUpperCase(), null)) {
-            return rs.next();
+        // Check if movies table is empty
+        try (ResultSet rs = executeQuery("SELECT COUNT(*) FROM movies")) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Insert sample movies
+                executeUpdate("INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('Inception', 'Inception', 2010, 8.8, 100, 1, 4)");
+                executeUpdate("INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('The Dark Knight', 'The Dark Knight', 2008, 9.0, 150, 1, 1)");
+                executeUpdate("INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('Pulp Fiction', 'Pulp Fiction', 1994, 8.9, 120, 2, 3)");
+                executeUpdate("INSERT INTO movies (title, original_title, release_year, imdb_rating, views, director_id, genre_id) " +
+                        "VALUES ('Interstellar', 'Interstellar', 2014, 8.6, 90, 1, 4)");
+            }
         }
     }
 

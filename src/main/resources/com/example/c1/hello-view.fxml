@@ -14,10 +14,14 @@
             <items>
                 <FXCollections fx:factory="observableArrayList">
                     <String fx:value="H2 База данных" />
+                    <String fx:value="CSV файл" />
                     <String fx:value="SQLite База данных" />
                 </FXCollections>
             </items>
         </ComboBox>
+        <Button fx:id="addButton" text="Добавить" />
+        <Button fx:id="editButton" text="Редактировать" />
+        <Button fx:id="deleteButton" text="Удалить" />
     </ToolBar>
 
     <TableView fx:id="movieTable" prefHeight="300">
