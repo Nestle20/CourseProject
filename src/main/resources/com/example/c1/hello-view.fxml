@@ -1,23 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import javafx.collections.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
 <VBox spacing="10" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.c1.HelloController">
-
     <ToolBar>
         <Label text="Источник данных:" />
-        <ComboBox fx:id="dataSourceComboBox" prefWidth="150">
-            <items>
-                <FXCollections fx:factory="observableArrayList">
-                    <String fx:value="H2 База данных" />
-                    <String fx:value="CSV файл" />
-                    <String fx:value="SQLite База данных" />
-                </FXCollections>
-            </items>
-        </ComboBox>
+        <ComboBox fx:id="dataSourceComboBox" prefWidth="150" />
         <Button fx:id="addButton" text="Добавить" />
         <Button fx:id="editButton" text="Редактировать" />
         <Button fx:id="deleteButton" text="Удалить" />
@@ -31,12 +20,20 @@
             <TableColumn fx:id="ratingColumn" prefWidth="80" text="Рейтинг" />
             <TableColumn fx:id="directorColumn" prefWidth="150" text="Режиссер" />
             <TableColumn fx:id="genreColumn" prefWidth="100" text="Жанр" />
+            <TableColumn fx:id="scheduleColumn" prefWidth="150" text="Срок просмотра" />
         </columns>
     </TableView>
 
+    <ToolBar>
+        <Button fx:id="setScheduleButton" text="Установить срок" />
+        <Button fx:id="updateScheduleButton" text="Перенести срок" />
+        <Button fx:id="markWatchedButton" text="Отметить просмотренным" />
+        <Button fx:id="showHistoryButton" text="История изменений" />
+    </ToolBar>
+
     <HBox spacing="10">
         <VBox spacing="5">
-            <Label style="-fx-font-weight: bold;" text="Умный поиск" />
+            <Label style="-fx-font-weight: bold;" text="Отбор по критериям(фильтрация)" />
             <HBox spacing="5">
                 <Label text="Жанр:" />
                 <ComboBox fx:id="genreComboBox" prefWidth="120" />

@@ -5,8 +5,9 @@ id;title;original_title;release_year;imdb_rating;views;director_id;genre_id
 4;Interstellar;Interstellar;2014;8.6;3;1;4
 5;The Shawshank Redemption;The Shawshank Redemption;1994;9.3;0;3;3
 6;Fight Club;Fight Club;1999;8.8;0;4;5
-7;Forrest Gump;Forrest Gump;1994;88;1;3;3
+7;Forrest Gump;Forrest Gump;1994;88.0;1;3;3
 8;The Matrix;The Matrix;1999;8.7;1;5;4
 9;Goodfellas;Goodfellas;1990;8.7;5;5;3
 10;The Godfather;The Godfather;1972;9.2;5;5;3
 11;The Godfather;The Godfather;1972;9.2;4;5;3
+12;аепнр;вапспролдьдж;2025;4.0;5;4;2

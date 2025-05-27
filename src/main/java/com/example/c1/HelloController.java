@@ -1,21 +1,34 @@
 package com.example.c1;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
-import javafx.util.Callback;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
+import javafx.stage.Stage;
+import javafx.util.Pair;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
 public class HelloController {
     // Константы для цветов подсветки
-    private static final String COLOR_ZERO_VIEWS = "-fx-background-color: #ADD8E6;"; // Голубой
-    private static final String COLOR_ONE_VIEW = "-fx-background-color: #D3D3D3;"; // Светло-серый
-    private static final String COLOR_TWO_TO_FOUR_VIEWS = "-fx-background-color: #FFFACD;"; // Светло-желтый
-    private static final String COLOR_FIVE_PLUS_VIEWS = "-fx-background-color: #FFC0CB;"; // Светло-розовый
+    private static final String COLOR_ZERO_VIEWS = "-fx-background-color: #ADD8E6;";
+    private static final String COLOR_ONE_VIEW = "-fx-background-color: #D3D3D3;";
+    private static final String COLOR_TWO_TO_FOUR_VIEWS = "-fx-background-color: #FFFACD;";
+    private static final String COLOR_FIVE_PLUS_VIEWS = "-fx-background-color: #FFC0CB;";
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final int REMINDER_DAYS_BEFORE = 3;
 
     // Элементы таблицы
     @FXML private TableView<Movie> movieTable;
@@ -25,6 +38,7 @@ public class HelloController {
     @FXML private TableColumn<Movie, Double> ratingColumn;
     @FXML private TableColumn<Movie, Director> directorColumn;
     @FXML private TableColumn<Movie, Genre> genreColumn;
+    @FXML private TableColumn<Movie, String> scheduleColumn;
 
     // Элементы управления
     @FXML private ComboBox<String> dataSourceComboBox;
@@ -39,6 +53,10 @@ public class HelloController {
     @FXML private Button addButton;
     @FXML private Button editButton;
     @FXML private Button deleteButton;
+    @FXML private Button setScheduleButton;
+    @FXML private Button updateScheduleButton;
+    @FXML private Button markWatchedButton;
+    @FXML private Button showHistoryButton;
 
     // Данные
     private MovieDAO movieDAO;
@@ -50,7 +68,7 @@ public class HelloController {
     public void initialize() {
         setupTableColumns();
         setupComboBoxes();
-        setupRowFactory(); // Настройка подсветки строк
+        setupRowFactory();
 
         // Инициализация с H2 базой данных по умолчанию
         movieDAO = DAOFactory.createMovieDAO(DAOFactory.DataSourceType.H2);
@@ -62,6 +80,13 @@ public class HelloController {
         addButton.setOnAction(e -> handleAddMovie());
         editButton.setOnAction(e -> handleEditMovie());
         deleteButton.setOnAction(e -> handleDeleteMovie());
+        setScheduleButton.setOnAction(e -> handleSetSchedule());
+        updateScheduleButton.setOnAction(e -> handleUpdateSchedule());
+        markWatchedButton.setOnAction(e -> handleMarkWatched());
+        showHistoryButton.setOnAction(e -> handleShowHistory());
+
+        // Проверка напоминаний при запуске
+        checkReminders();
     }
 
     private void setupTableColumns() {
@@ -71,7 +96,21 @@ public class HelloController {
         ratingColumn.setCellValueFactory(new PropertyValueFactory<>("imdbRating"));
         directorColumn.setCellValueFactory(new PropertyValueFactory<>("director"));
         genreColumn.setCellValueFactory(new PropertyValueFactory<>("genre"));
+        scheduleColumn.setCellValueFactory(cellData -> {
+            MovieSchedule schedule = movieDAO.getMovieSchedule(cellData.getValue().getId());
+            return schedule != null ?
+                    new SimpleStringProperty(formatSchedule(schedule)) :
+                    new SimpleStringProperty("Не назначено");
+        });
         movieTable.setItems(movies);
+    }
+
+    private String formatSchedule(MovieSchedule schedule) {
+        String str = schedule.getPlannedDate().format(DATE_FORMATTER);
+        if (schedule.getCompletionDate() != null) {
+            str += " (просмотрено " + schedule.getCompletionDate().format(DATE_FORMATTER) + ")";
+        }
+        return str;
     }
 
     private void setupComboBoxes() {
@@ -133,6 +172,246 @@ public class HelloController {
             refreshData();
         } catch (Exception e) {
             showAlert("Error", "Failed to switch data source", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void refreshData() {
+        try {
+            List<Movie> movieList = movieDAO.getAllMovies();
+            movies.setAll(movieList);
+            movieTable.refresh();
+
+            if (movieList.isEmpty()) {
+                showAlert("Information", "No Data", "The movie table is empty. Add movies using the Add button.");
+            }
+        } catch (Exception e) {
+            showAlert("Error", "Failed to load data", "Error loading data from database: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void showAlert(String title, String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    private void handleSetSchedule() {
+        Movie selectedMovie = movieTable.getSelectionModel().getSelectedItem();
+        if (selectedMovie == null) {
+            showAlert("Ошибка", "Не выбрано", "Пожалуйста, выберите фильм");
+            return;
+        }
+
+        TextInputDialog dialog = new TextInputDialog(LocalDate.now().plusDays(7).format(DATE_FORMATTER));
+        dialog.setTitle("Установка срока");
+        dialog.setHeaderText("Установите срок просмотра для: " + selectedMovie.getTitle());
+        dialog.setContentText("Дата (дд.мм.гггг):");
+
+        Optional<String> result = dialog.showAndWait();
+        result.ifPresent(dateStr -> {
+            try {
+                LocalDate date = LocalDate.parse(dateStr, DATE_FORMATTER);
+                movieDAO.setMovieSchedule(selectedMovie.getId(), date);
+                refreshData();
+                showAlert("Успех", "Срок установлен",
+                        "Для фильма " + selectedMovie.getTitle() + " установлен срок: " + dateStr);
+            } catch (DateTimeParseException e) {
+                showAlert("Ошибка", "Неверная дата", "Пожалуйста, введите дату в формате дд.мм.гггг");
+            } catch (Exception e) {
+                showAlert("Ошибка", "Ошибка установки срока", e.getMessage());
+            }
+        });
+    }
+
+    private void handleUpdateSchedule() {
+        Movie selectedMovie = movieTable.getSelectionModel().getSelectedItem();
+        if (selectedMovie == null) {
+            showAlert("Ошибка", "Не выбрано", "Пожалуйста, выберите фильм");
+            return;
+        }
+
+        MovieSchedule schedule = movieDAO.getMovieSchedule(selectedMovie.getId());
+        if (schedule == null) {
+            showAlert("Ошибка", "Нет расписания", "Для этого фильма не установлен срок просмотра");
+            return;
+        }
+
+        // Create a dialog with two input fields
+        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        dialog.setTitle("Перенос срока");
+        dialog.setHeaderText("Перенести срок просмотра для: " + selectedMovie.getTitle());
+
+        // Set the button types
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // Create the date and reason input fields
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Новая дата (дд.мм.гггг):"), 0, 0);
+        TextField dateField = new TextField(schedule.getPlannedDate().format(DATE_FORMATTER));
+        grid.add(dateField, 1, 0);
+        grid.add(new Label("Причина:"), 0, 1);
+        TextField reasonField = new TextField();
+        grid.add(reasonField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Convert the result to a pair of date and reason
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == ButtonType.OK) {
+                return new Pair<>(dateField.getText(), reasonField.getText());
+            }
+            return null;
+        });
+
+        Optional<Pair<String, String>> result = dialog.showAndWait();
+        result.ifPresent(pair -> {
+            try {
+                LocalDate newDate = LocalDate.parse(pair.getKey(), DATE_FORMATTER);
+                String reason = pair.getValue();
+
+                if (reason.isEmpty()) {
+                    showAlert("Ошибка", "Не указана причина", "Пожалуйста, укажите причину переноса");
+                    return;
+                }
+
+                movieDAO.updateMovieSchedule(selectedMovie.getId(), newDate, reason);
+                refreshData();
+                showAlert("Успех", "Срок перенесен",
+                        "Срок просмотра для " + selectedMovie.getTitle() + " перенесен на " +
+                                pair.getKey() + " по причине: " + reason);
+            } catch (DateTimeParseException e) {
+                showAlert("Ошибка", "Неверная дата", "Пожалуйста, введите дату в формате дд.мм.гггг");
+            } catch (Exception e) {
+                showAlert("Ошибка", "Ошибка переноса срока", e.getMessage());
+            }
+        });
+    }
+
+    private void handleMarkWatched() {
+        Movie selectedMovie = movieTable.getSelectionModel().getSelectedItem();
+        if (selectedMovie == null) {
+            showAlert("Ошибка", "Не выбрано", "Пожалуйста, выберите фильм");
+            return;
+        }
+
+        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmation.setTitle("Подтверждение");
+        confirmation.setHeaderText("Отметить как просмотренное");
+        confirmation.setContentText("Вы уверены, что хотите отметить фильм '" +
+                selectedMovie.getTitle() + "' как просмотренный?");
+
+        Optional<ButtonType> result = confirmation.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                movieDAO.markMovieAsWatched(selectedMovie.getId());
+                refreshData();
+                showAlert("Успех", "Отмечено как просмотренное",
+                        "Фильм " + selectedMovie.getTitle() + " отмечен как просмотренный");
+            } catch (Exception e) {
+                showAlert("Ошибка", "Ошибка отметки", e.getMessage());
+            }
+        }
+    }
+
+    private void handleShowHistory() {
+        Movie selectedMovie = movieTable.getSelectionModel().getSelectedItem();
+        if (selectedMovie == null) {
+            showAlert("Ошибка", "Не выбрано", "Пожалуйста, выберите фильм");
+            return;
+        }
+
+        List<ScheduleChange> history = movieDAO.getScheduleHistory(selectedMovie.getId());
+        if (history.isEmpty()) {
+            showAlert("Информация", "История изменений",
+                    "Для фильма " + selectedMovie.getTitle() + " нет истории изменений сроков");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("История изменений сроков для: ").append(selectedMovie.getTitle()).append("\n\n");
+
+        for (ScheduleChange change : history) {
+            sb.append(change.getChangeDate().format(DATE_FORMATTER))
+                    .append(": перенесено с ")
+                    .append(change.getOldDate().format(DATE_FORMATTER))
+                    .append(" на ")
+                    .append(change.getNewDate().format(DATE_FORMATTER))
+                    .append("\nПричина: ")
+                    .append(change.getReason())
+                    .append("\n\n");
+        }
+
+        TextArea textArea = new TextArea(sb.toString());
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefSize(500, 300);
+
+        ScrollPane scrollPane = new ScrollPane(textArea);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        Stage stage = new Stage();
+        stage.setTitle("История изменений сроков: " + selectedMovie.getTitle());
+        stage.setScene(new Scene(scrollPane, 500, 400));
+        stage.show();
+    }
+
+    private void checkReminders() {
+        List<Movie> upcomingMovies = movieDAO.getMoviesWithUpcomingDeadlines(REMINDER_DAYS_BEFORE);
+        if (!upcomingMovies.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Напоминание: у вас запланированы к просмотру:\n\n");
+
+            for (Movie movie : upcomingMovies) {
+                MovieSchedule schedule = movieDAO.getMovieSchedule(movie.getId());
+                sb.append("- ").append(movie.getTitle())
+                        .append(" (до ").append(schedule.getPlannedDate().format(DATE_FORMATTER)).append(")\n");
+            }
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Напоминание");
+            alert.setHeaderText("Предстоящие просмотры");
+            alert.setContentText(sb.toString());
+            alert.showAndWait();
+        }
+    }
+
+    private void handleSmartSearch() {
+        try {
+            Genre selectedGenre = genreComboBox.getSelectionModel().getSelectedItem();
+            double minRating = minRatingField.getText().isEmpty() ? 0 : Double.parseDouble(minRatingField.getText());
+            int minYear = minYearField.getText().isEmpty() ? 0 : Integer.parseInt(minYearField.getText());
+
+            List<Movie> searchResults = movieDAO.smartSearch(selectedGenre, minRating, minYear);
+            movies.setAll(searchResults);
+            if (searchResults.isEmpty()) {
+                showAlert("Information", "No Results", "No movies found matching the criteria");
+            }
+        } catch (NumberFormatException e) {
+            showAlert("Input Error", "Invalid Data", "Please enter valid numeric values for rating and year");
+        } catch (Exception e) {
+            showAlert("Error", "Search Failed", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void handleViewStatistics() {
+        try {
+            Director selectedDirector = directorComboBox.getSelectionModel().getSelectedItem();
+            if (selectedDirector != null) {
+                double percentage = movieDAO.getDirectorViewPercentage(selectedDirector);
+                showAlert("View Statistics",
+                        "View percentage for " + selectedDirector.getName(),
+                        String.format("%.2f%% of all views", percentage));
+            }
+        } catch (Exception e) {
+            showAlert("Error", "Failed to get statistics", e.getMessage());
             e.printStackTrace();
         }
     }
@@ -260,60 +539,5 @@ public class HelloController {
         });
 
         return dialog;
-    }
-
-    private void handleSmartSearch() {
-        try {
-            Genre selectedGenre = genreComboBox.getSelectionModel().getSelectedItem();
-            double minRating = minRatingField.getText().isEmpty() ? 0 : Double.parseDouble(minRatingField.getText());
-            int minYear = minYearField.getText().isEmpty() ? 0 : Integer.parseInt(minYearField.getText());
-
-            List<Movie> searchResults = movieDAO.smartSearch(selectedGenre, minRating, minYear);
-            movies.setAll(searchResults);
-            if (searchResults.isEmpty()) {
-                showAlert("Information", "No Results", "No movies found matching the criteria");
-            }
-        } catch (NumberFormatException e) {
-            showAlert("Input Error", "Invalid Data", "Please enter valid numeric values for rating and year");
-        } catch (Exception e) {
-            showAlert("Error", "Search Failed", e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void handleViewStatistics() {
-        try {
-            Director selectedDirector = directorComboBox.getSelectionModel().getSelectedItem();
-            if (selectedDirector != null) {
-                double percentage = movieDAO.getDirectorViewPercentage(selectedDirector);
-                showAlert("View Statistics",
-                        "View percentage for " + selectedDirector.getName(),
-                        String.format("%.2f%% of all views", percentage));
-            }
-        } catch (Exception e) {
-            showAlert("Error", "Failed to get statistics", e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void refreshData() {
-        try {
-            List<Movie> movieList = movieDAO.getAllMovies();
-            movies.setAll(movieList);
-            if (movieList.isEmpty()) {
-                showAlert("Information", "No Data", "The movie table is empty. Add movies using the Add button.");
-            }
-        } catch (Exception e) {
-            showAlert("Error", "Failed to load data", "Error loading data from database: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void showAlert(String title, String header, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(header);
-        alert.setContentText(content);
-        alert.showAndWait();
     }
 }

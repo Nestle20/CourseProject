@@ -2,8 +2,11 @@ package com.example.c1;
 
 import javax.sql.rowset.CachedRowSet;
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class MovieH2DAO implements MovieDAO {
     private final H2DBConnect dbConnect;
@@ -16,9 +19,28 @@ public class MovieH2DAO implements MovieDAO {
         this.dbConnect = new H2DBConnect();
         try {
             dbConnect.connect(false);
+            initializeScheduleTables();
         } catch (SQLException e) {
             throw new RuntimeException("Failed to connect to H2 database", e);
         }
+    }
+
+    private void initializeScheduleTables() throws SQLException {
+        dbConnect.executeUpdate("CREATE TABLE IF NOT EXISTS movie_schedules (" +
+                "movie_id INT PRIMARY KEY, " +
+                "planned_date DATE NOT NULL, " +
+                "completion_date DATE, " +
+                "reminder_sent BOOLEAN DEFAULT FALSE, " +
+                "FOREIGN KEY (movie_id) REFERENCES movies(id))");
+
+        dbConnect.executeUpdate("CREATE TABLE IF NOT EXISTS schedule_changes (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "movie_id INT NOT NULL, " +
+                "old_date DATE NOT NULL, " +
+                "new_date DATE NOT NULL, " +
+                "reason VARCHAR(255) NOT NULL, " +
+                "change_date DATE NOT NULL, " +
+                "FOREIGN KEY (movie_id) REFERENCES movies(id))");
     }
 
     @Override
@@ -70,8 +92,23 @@ public class MovieH2DAO implements MovieDAO {
         try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             pstmt.executeUpdate();
+            deleteScheduleData(id);
         } catch (SQLException e) {
             throw new RuntimeException("Error deleting movie", e);
+        }
+    }
+
+    private void deleteScheduleData(int movieId) throws SQLException {
+        String deleteChangesSql = "DELETE FROM schedule_changes WHERE movie_id = ?";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(deleteChangesSql)) {
+            pstmt.setInt(1, movieId);
+            pstmt.executeUpdate();
+        }
+
+        String deleteScheduleSql = "DELETE FROM movie_schedules WHERE movie_id = ?";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(deleteScheduleSql)) {
+            pstmt.setInt(1, movieId);
+            pstmt.executeUpdate();
         }
     }
 
@@ -103,6 +140,175 @@ public class MovieH2DAO implements MovieDAO {
             throw new RuntimeException("Error getting movies", e);
         }
         return movies;
+    }
+
+    @Override
+    public void setMovieSchedule(int movieId, LocalDate plannedDate) {
+        String sql = "MERGE INTO movie_schedules KEY(movie_id) VALUES (?, ?, NULL, FALSE)";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
+            pstmt.setInt(1, movieId);
+            pstmt.setDate(2, Date.valueOf(plannedDate));
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error setting movie schedule", e);
+        }
+    }
+
+    @Override
+    public void updateMovieSchedule(int movieId, LocalDate newDate, String reason) {
+        Optional<LocalDate> currentDate = null;
+        try {
+            currentDate = getCurrentPlannedDate(movieId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        if (!currentDate.isPresent()) {
+            throw new RuntimeException("No existing schedule found for movie ID: " + movieId);
+        }
+
+        String historySql = "INSERT INTO schedule_changes (movie_id, old_date, new_date, reason, change_date) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(historySql)) {
+            pstmt.setInt(1, movieId);
+            pstmt.setDate(2, Date.valueOf(currentDate.get()));
+            pstmt.setDate(3, Date.valueOf(newDate));
+            pstmt.setString(4, reason);
+            pstmt.setDate(5, Date.valueOf(LocalDate.now()));
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error saving schedule change history", e);
+        }
+
+        String updateSql = "UPDATE movie_schedules SET planned_date = ?, reminder_sent = FALSE WHERE movie_id = ?";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(updateSql)) {
+            pstmt.setDate(1, Date.valueOf(newDate));
+            pstmt.setInt(2, movieId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating movie schedule", e);
+        }
+    }
+
+    private Optional<LocalDate> getCurrentPlannedDate(int movieId) throws SQLException {
+        String sql = "SELECT planned_date FROM movie_schedules WHERE movie_id = ?";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
+            pstmt.setInt(1, movieId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(rs.getDate("planned_date").toLocalDate());
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public MovieSchedule getMovieSchedule(int movieId) {
+        String sql = "SELECT planned_date, completion_date, reminder_sent FROM movie_schedules WHERE movie_id = ?";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
+            pstmt.setInt(1, movieId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    MovieSchedule schedule = new MovieSchedule(movieId, rs.getDate("planned_date").toLocalDate());
+                    if (rs.getDate("completion_date") != null) {
+                        schedule.markAsCompleted(rs.getDate("completion_date").toLocalDate());
+                    }
+                    schedule.setReminderSent(rs.getBoolean("reminder_sent"));
+                    return schedule;
+                }
+            }
+        } catch (SQLException e) {
+            // If no schedule exists, return null
+        }
+        return null;
+    }
+
+    @Override
+    public List<Movie> getMoviesWithUpcomingDeadlines(int daysBefore) {
+        LocalDate now = LocalDate.now();
+        LocalDate deadline = now.plusDays(daysBefore);
+
+        String sql = "SELECT m.id, m.title, m.original_title, m.release_year, m.imdb_rating, m.views, " +
+                "m.director_id, m.genre_id " +
+                "FROM movies m JOIN movie_schedules ms ON m.id = ms.movie_id " +
+                "WHERE ms.planned_date BETWEEN ? AND ? AND ms.completion_date IS NULL " +
+                "AND (ms.reminder_sent = FALSE OR ms.reminder_sent IS NULL)";
+
+        List<Movie> movies = new ArrayList<>();
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
+            pstmt.setDate(1, Date.valueOf(now));
+            pstmt.setDate(2, Date.valueOf(deadline));
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int directorId = rs.getInt("director_id");
+                    int genreId = rs.getInt("genre_id");
+
+                    Director director = directorDAO.getDirectorById(directorId);
+                    Genre genre = genreDAO.getGenreById(genreId);
+
+                    movies.add(new Movie(
+                            rs.getInt("id"),
+                            rs.getString("title"),
+                            rs.getString("original_title"),
+                            rs.getInt("release_year"),
+                            rs.getDouble("imdb_rating"),
+                            rs.getInt("views"),
+                            director,
+                            genre
+                    ));
+                }
+            }
+
+            if (!movies.isEmpty()) {
+                String updateSql = "UPDATE movie_schedules SET reminder_sent = TRUE " +
+                        "WHERE planned_date BETWEEN ? AND ?";
+                try (PreparedStatement updatePstmt = dbConnect.prepareStatement(updateSql)) {
+                    updatePstmt.setDate(1, Date.valueOf(now));
+                    updatePstmt.setDate(2, Date.valueOf(deadline));
+                    updatePstmt.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting movies with upcoming deadlines", e);
+        }
+        return movies;
+    }
+
+    @Override
+    public void markMovieAsWatched(int movieId) {
+        String sql = "UPDATE movie_schedules SET completion_date = ? WHERE movie_id = ?";
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
+            pstmt.setDate(1, Date.valueOf(LocalDate.now()));
+            pstmt.setInt(2, movieId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Error marking movie as watched", e);
+        }
+    }
+
+    @Override
+    public List<ScheduleChange> getScheduleHistory(int movieId) {
+        String sql = "SELECT old_date, new_date, reason, change_date FROM schedule_changes " +
+                "WHERE movie_id = ? ORDER BY change_date DESC";
+        List<ScheduleChange> history = new ArrayList<>();
+
+        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
+            pstmt.setInt(1, movieId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    history.add(new ScheduleChange(
+                            rs.getDate("old_date").toLocalDate(),
+                            rs.getDate("new_date").toLocalDate(),
+                            rs.getString("reason"),
+                            rs.getDate("change_date").toLocalDate()
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error getting schedule history", e);
+        }
+        return history;
     }
 
     @Override
