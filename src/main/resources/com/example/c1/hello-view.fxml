@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.lang.*?>
+<?import javafx.collections.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.collections.FXCollections?>
 
-<?import java.lang.String?>
-<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.example.c1.HelloController" spacing="10">
+<VBox spacing="10" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.c1.HelloController">
 
     <ToolBar>
         <Label text="Источник данных:" />
@@ -37,7 +36,7 @@
 
     <HBox spacing="10">
         <VBox spacing="5">
-            <Label text="Умный поиск" style="-fx-font-weight: bold;" />
+            <Label style="-fx-font-weight: bold;" text="Умный поиск" />
             <HBox spacing="5">
                 <Label text="Жанр:" />
                 <ComboBox fx:id="genreComboBox" prefWidth="120" />
@@ -54,18 +53,12 @@
         </VBox>
 
         <VBox spacing="5">
-            <Label text="Статистика" style="-fx-font-weight: bold;" />
+            <Label style="-fx-font-weight: bold;" text="Статистика" />
             <HBox spacing="5">
                 <Label text="Режиссер:" />
                 <ComboBox fx:id="directorComboBox" prefWidth="200" />
             </HBox>
-            <Button fx:id="statsButton" text="Показать статистику" />
-        </VBox>
-
-        <VBox spacing="5">
-            <Label text="Поиск дубликатов" style="-fx-font-weight: bold;" />
-            <Label text="По оригинальному названию и году" />
-            <Button fx:id="duplicatesButton" text="Найти дубликаты" />
+            <Button fx:id="statsButton" prefWidth="167.0" text="Показать статистику" />
         </VBox>
     </HBox>
 </VBox>

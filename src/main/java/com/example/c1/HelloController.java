@@ -6,70 +6,64 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.util.Callback;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Контроллер для главного окна приложения.
- * Управляет отображением данных о фильмах и обработкой пользовательских действий.
- */
 public class HelloController {
-    // Элементы интерфейса, аннотированные @FXML для связи с FXML
+    // Константы для цветов подсветки
+    private static final String COLOR_ZERO_VIEWS = "-fx-background-color: #ADD8E6;"; // Голубой
+    private static final String COLOR_ONE_VIEW = "-fx-background-color: #D3D3D3;"; // Светло-серый
+    private static final String COLOR_TWO_TO_FOUR_VIEWS = "-fx-background-color: #FFFACD;"; // Светло-желтый
+    private static final String COLOR_FIVE_PLUS_VIEWS = "-fx-background-color: #FFC0CB;"; // Светло-розовый
 
-    @FXML private TableView<Movie> movieTable; // Таблица для отображения фильмов
-    @FXML private TableColumn<Movie, Integer> idColumn; // Колонка с ID фильма
-    @FXML private TableColumn<Movie, String> titleColumn; // Колонка с названием фильма
-    @FXML private TableColumn<Movie, Integer> yearColumn; // Колонка с годом выпуска
-    @FXML private TableColumn<Movie, Double> ratingColumn; // Колонка с рейтингом
-    @FXML private TableColumn<Movie, Director> directorColumn; // Колонка с режиссером
-    @FXML private TableColumn<Movie, Genre> genreColumn; // Колонка с жанром
+    // Элементы таблицы
+    @FXML private TableView<Movie> movieTable;
+    @FXML private TableColumn<Movie, Integer> idColumn;
+    @FXML private TableColumn<Movie, String> titleColumn;
+    @FXML private TableColumn<Movie, Integer> yearColumn;
+    @FXML private TableColumn<Movie, Double> ratingColumn;
+    @FXML private TableColumn<Movie, Director> directorColumn;
+    @FXML private TableColumn<Movie, Genre> genreColumn;
 
-    // Элементы управления для фильтрации и выбора
-    @FXML private ComboBox<String> dataSourceComboBox; // Выбор источника данных
-    @FXML private ComboBox<Genre> genreComboBox; // Выбор жанра для поиска
-    @FXML private ComboBox<Director> directorComboBox; // Выбор режиссера для статистики
-    @FXML private TextField minRatingField; // Поле для минимального рейтинга
-    @FXML private TextField minYearField; // Поле для минимального года
+    // Элементы управления
+    @FXML private ComboBox<String> dataSourceComboBox;
+    @FXML private ComboBox<Genre> genreComboBox;
+    @FXML private ComboBox<Director> directorComboBox;
+    @FXML private TextField minRatingField;
+    @FXML private TextField minYearField;
 
-    // Кнопки управления
-    @FXML private Button searchButton; // Кнопка поиска
-    @FXML private Button statsButton; // Кнопка статистики
-    @FXML private Button duplicatesButton; // Кнопка поиска дубликатов
-    @FXML private Button addButton; // Кнопка добавления
-    @FXML private Button editButton; // Кнопка редактирования
-    @FXML private Button deleteButton; // Кнопка удаления
+    // Кнопки
+    @FXML private Button searchButton;
+    @FXML private Button statsButton;
+    @FXML private Button addButton;
+    @FXML private Button editButton;
+    @FXML private Button deleteButton;
 
-    // Данные приложения
-    private MovieDAO movieDAO; // DAO для работы с фильмами
-    private final ObservableList<Movie> movies = FXCollections.observableArrayList(); // Список фильмов
-    private final ObservableList<Genre> genres = FXCollections.observableArrayList(DAOFactory.getGenreDAO().getAllGenres()); // Список жанров
-    private final ObservableList<Director> directors = FXCollections.observableArrayList(DAOFactory.getDirectorDAO().getAllDirectors()); // Список режиссеров
+    // Данные
+    private MovieDAO movieDAO;
+    private final ObservableList<Movie> movies = FXCollections.observableArrayList();
+    private final ObservableList<Genre> genres = FXCollections.observableArrayList(DAOFactory.getGenreDAO().getAllGenres());
+    private final ObservableList<Director> directors = FXCollections.observableArrayList(DAOFactory.getDirectorDAO().getAllDirectors());
 
-    /**
-     * Инициализация контроллера.
-     * Вызывается автоматически после загрузки FXML.
-     */
     @FXML
     public void initialize() {
-        setupTableColumns(); // Настройка колонок таблицы
-        setupComboBoxes(); // Настройка выпадающих списков
+        setupTableColumns();
+        setupComboBoxes();
+        setupRowFactory(); // Настройка подсветки строк
 
-        // Инициализация DAO с H2 базой данных по умолчанию
+        // Инициализация с H2 базой данных по умолчанию
         movieDAO = DAOFactory.createMovieDAO(DAOFactory.DataSourceType.H2);
-        refreshData(); // Загрузка данных
+        refreshData();
 
-        // Настройка обработчиков событий для кнопок
+        // Назначение обработчиков событий
         searchButton.setOnAction(e -> handleSmartSearch());
         statsButton.setOnAction(e -> handleViewStatistics());
-        duplicatesButton.setOnAction(e -> handleFindDuplicates());
         addButton.setOnAction(e -> handleAddMovie());
         editButton.setOnAction(e -> handleEditMovie());
         deleteButton.setOnAction(e -> handleDeleteMovie());
     }
 
-    /**
-     * Настраивает колонки таблицы фильмов.
-     */
     private void setupTableColumns() {
         idColumn.setCellValueFactory(new PropertyValueFactory<>("id"));
         titleColumn.setCellValueFactory(new PropertyValueFactory<>("title"));
@@ -77,14 +71,10 @@ public class HelloController {
         ratingColumn.setCellValueFactory(new PropertyValueFactory<>("imdbRating"));
         directorColumn.setCellValueFactory(new PropertyValueFactory<>("director"));
         genreColumn.setCellValueFactory(new PropertyValueFactory<>("genre"));
-        movieTable.setItems(movies); // Устанавливаем данные для таблицы
+        movieTable.setItems(movies);
     }
 
-    /**
-     * Настраивает выпадающие списки.
-     */
     private void setupComboBoxes() {
-        // Настройка выбора источника данных
         dataSourceComboBox.getItems().setAll(
                 "H2 Database",
                 "CSV File",
@@ -93,22 +83,43 @@ public class HelloController {
         dataSourceComboBox.getSelectionModel().selectFirst();
         dataSourceComboBox.setOnAction(e -> switchDataSource());
 
-        // Настройка выбора жанра
         genreComboBox.setItems(genres);
         if (!genres.isEmpty()) {
             genreComboBox.getSelectionModel().selectFirst();
         }
 
-        // Настройка выбора режиссера
         directorComboBox.setItems(directors);
         if (!directors.isEmpty()) {
             directorComboBox.getSelectionModel().selectFirst();
         }
     }
 
-    /**
-     * Переключает источник данных в зависимости от выбора пользователя.
-     */
+    private void setupRowFactory() {
+        movieTable.setRowFactory(tv -> new TableRow<Movie>() {
+            @Override
+            protected void updateItem(Movie movie, boolean empty) {
+                super.updateItem(movie, empty);
+
+                if (movie == null || empty) {
+                    setStyle("");
+                    return;
+                }
+
+                // Устанавливаем цвет фона в зависимости от количества просмотров
+                int views = movie.getViews();
+                if (views == 0) {
+                    setStyle(COLOR_ZERO_VIEWS);
+                } else if (views == 1) {
+                    setStyle(COLOR_ONE_VIEW);
+                } else if (views > 1 && views < 5) {
+                    setStyle(COLOR_TWO_TO_FOUR_VIEWS);
+                } else {
+                    setStyle(COLOR_FIVE_PLUS_VIEWS);
+                }
+            }
+        });
+    }
+
     private void switchDataSource() {
         String selected = dataSourceComboBox.getSelectionModel().getSelectedItem();
         try {
@@ -119,23 +130,20 @@ public class HelloController {
             } else if ("SQLite Database".equals(selected)) {
                 movieDAO = DAOFactory.createMovieDAO(DAOFactory.DataSourceType.SQLITE);
             }
-            refreshData(); // Обновляем данные после смены источника
+            refreshData();
         } catch (Exception e) {
             showAlert("Error", "Failed to switch data source", e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Обрабатывает добавление нового фильма.
-     */
     private void handleAddMovie() {
         Dialog<Movie> dialog = createMovieDialog("Add Movie", null);
         Optional<Movie> result = dialog.showAndWait();
         result.ifPresent(movie -> {
             try {
-                movieDAO.addMovie(movie); // Добавляем фильм через DAO
-                refreshData(); // Обновляем таблицу
+                movieDAO.addMovie(movie);
+                refreshData();
             } catch (Exception e) {
                 showAlert("Error", "Failed to add movie", e.getMessage());
                 e.printStackTrace();
@@ -143,9 +151,6 @@ public class HelloController {
         });
     }
 
-    /**
-     * Обрабатывает редактирование фильма.
-     */
     private void handleEditMovie() {
         Movie selectedMovie = movieTable.getSelectionModel().getSelectedItem();
         if (selectedMovie == null) {
@@ -157,8 +162,8 @@ public class HelloController {
         Optional<Movie> result = dialog.showAndWait();
         result.ifPresent(movie -> {
             try {
-                movieDAO.updateMovie(movie); // Обновляем фильм через DAO
-                refreshData(); // Обновляем таблицу
+                movieDAO.updateMovie(movie);
+                refreshData();
             } catch (Exception e) {
                 showAlert("Error", "Failed to update movie", e.getMessage());
                 e.printStackTrace();
@@ -166,9 +171,6 @@ public class HelloController {
         });
     }
 
-    /**
-     * Обрабатывает удаление фильма.
-     */
     private void handleDeleteMovie() {
         Movie selectedMovie = movieTable.getSelectionModel().getSelectedItem();
         if (selectedMovie == null) {
@@ -176,7 +178,6 @@ public class HelloController {
             return;
         }
 
-        // Подтверждение удаления
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirm Deletion");
         alert.setHeaderText("Delete Movie");
@@ -185,8 +186,8 @@ public class HelloController {
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
-                movieDAO.deleteMovie(selectedMovie.getId()); // Удаляем фильм через DAO
-                refreshData(); // Обновляем таблицу
+                movieDAO.deleteMovie(selectedMovie.getId());
+                refreshData();
             } catch (Exception e) {
                 showAlert("Error", "Failed to delete movie", e.getMessage());
                 e.printStackTrace();
@@ -194,18 +195,12 @@ public class HelloController {
         }
     }
 
-    /**
-     * Создает диалоговое окно для ввода данных о фильме.
-     * @param title заголовок окна
-     * @param movie фильм для редактирования (null для нового фильма)
-     * @return диалоговое окно
-     */
     private Dialog<Movie> createMovieDialog(String title, Movie movie) {
         Dialog<Movie> dialog = new Dialog<>();
         dialog.setTitle(title);
         dialog.setHeaderText("Enter movie details");
 
-        // Создаем поля формы
+        // Поля формы
         TextField titleField = new TextField(movie != null ? movie.getTitle() : "");
         TextField originalTitleField = new TextField(movie != null ? movie.getOriginalTitle() : "");
         TextField yearField = new TextField(movie != null ? String.valueOf(movie.getYear()) : "");
@@ -214,7 +209,6 @@ public class HelloController {
         ComboBox<Director> directorCombo = new ComboBox<>(directors);
         ComboBox<Genre> genreCombo = new ComboBox<>(genres);
 
-        // Устанавливаем текущие значения для редактирования
         if (movie != null) {
             directorCombo.getSelectionModel().select(movie.getDirector());
             genreCombo.getSelectionModel().select(movie.getGenre());
@@ -223,7 +217,6 @@ public class HelloController {
             genreCombo.getSelectionModel().selectFirst();
         }
 
-        // Создаем layout для диалога
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
@@ -243,11 +236,8 @@ public class HelloController {
         grid.add(genreCombo, 1, 6);
 
         dialog.getDialogPane().setContent(grid);
-
-        // Добавляем кнопки OK и Cancel
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        // Преобразуем результат в объект Movie
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
                 try {
@@ -272,9 +262,6 @@ public class HelloController {
         return dialog;
     }
 
-    /**
-     * Обрабатывает "умный" поиск фильмов.
-     */
     private void handleSmartSearch() {
         try {
             Genre selectedGenre = genreComboBox.getSelectionModel().getSelectedItem();
@@ -282,8 +269,7 @@ public class HelloController {
             int minYear = minYearField.getText().isEmpty() ? 0 : Integer.parseInt(minYearField.getText());
 
             List<Movie> searchResults = movieDAO.smartSearch(selectedGenre, minRating, minYear);
-            movies.setAll(searchResults); // Обновляем таблицу результатами поиска
-
+            movies.setAll(searchResults);
             if (searchResults.isEmpty()) {
                 showAlert("Information", "No Results", "No movies found matching the criteria");
             }
@@ -295,9 +281,6 @@ public class HelloController {
         }
     }
 
-    /**
-     * Обрабатывает просмотр статистики по режиссеру.
-     */
     private void handleViewStatistics() {
         try {
             Director selectedDirector = directorComboBox.getSelectionModel().getSelectedItem();
@@ -313,31 +296,10 @@ public class HelloController {
         }
     }
 
-    /**
-     * Обрабатывает поиск дубликатов фильмов.
-     */
-    private void handleFindDuplicates() {
-        try {
-            List<Movie> duplicates = movieDAO.findDuplicatesByTmdb();
-            movies.setAll(duplicates); // Отображаем дубликаты в таблице
-
-            if (duplicates.isEmpty()) {
-                showAlert("Information", "No Duplicates", "No duplicate movies found");
-            }
-        } catch (Exception e) {
-            showAlert("Error", "Failed to find duplicates", e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Обновляет данные в таблице.
-     */
     private void refreshData() {
         try {
             List<Movie> movieList = movieDAO.getAllMovies();
-            movies.setAll(movieList); // Обновляем данные таблицы
-
+            movies.setAll(movieList);
             if (movieList.isEmpty()) {
                 showAlert("Information", "No Data", "The movie table is empty. Add movies using the Add button.");
             }
@@ -347,12 +309,6 @@ public class HelloController {
         }
     }
 
-    /**
-     * Показывает информационное окно.
-     * @param title заголовок окна
-     * @param header заголовок сообщения
-     * @param content текст сообщения
-     */
     private void showAlert(String title, String header, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
