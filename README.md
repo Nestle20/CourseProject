@@ -48,7 +48,7 @@
 ---
 
 ## Результат работы программы
-![Результат работы программы](https://github.com/Nestle20/CourseProject/blob/CourseProject/img/user-attachments/assets/24ccf552-f745-49fe-ab96-3d2439e0a518?raw=true)
+![Результат работы программы](https://github.com/Nestle20/CourseProject/blob/CourseProject/img/user-attachments/assets/24ccf552-f745-49fe-ab96-3d2439e0a518)
 ![Главное окно](https://example.com/img/![Снимок экрана (245)](https://github.com/user-attachments/assets/24ccf552-f745-49fe-ab96-3d2439e0a518)
 )  
 ![Фильтрация и статистика](https://example.com/img/interface2.png)
