@@ -42,5 +42,6 @@
 ---
 
 ## Результат работы программы
+![Результат работы программы](https://github.com/Nestle20/CourseProject/blob/CourseProject/img/Главная страница.img?raw=true)
 ![Главное окно](https://example.com/img/![Снимок экрана (245)](https://github.com/Главная страница.img)
 
