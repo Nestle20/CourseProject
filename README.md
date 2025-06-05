@@ -42,5 +42,5 @@
 ---
 
 ## Результат работы программы
-![Главное окно](https://example.com/img/![Снимок экрана (245)](https://github.com/user-attachments/assets/24ccf552-f745-49fe-ab96-3d2439e0a518)
-)  
+![Главное окно](https://example.com/img/![Снимок экрана (245)](https://github.com/Главная страница.img)
+
