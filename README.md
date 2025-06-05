@@ -41,13 +41,6 @@
 
 ---
 
-## Сценарии использования
-
-[Сценарии использования](docs/usecases.md)
-
----
-
 ## Результат работы программы
 ![Главное окно](https://example.com/img/![Снимок экрана (245)](https://github.com/user-attachments/assets/24ccf552-f745-49fe-ab96-3d2439e0a518)
 )  
-![Фильтрация и статистика](https://example.com/img/interface2.png)
